@@ -1,0 +1,1602 @@
+```html
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Minimal Anime 16:9 Live Countdown Card</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@800;900&family=Nunito:wght@700;800;900&display=swap');
+
+    :root {
+      --neon-red: #ff2a6d;
+      --neon-glow: rgba(255, 42, 109, 0.55);
+      --card-bg: rgba(18, 12, 16, 0.38); /* Tăng độ trong suốt kính mờ */
+      --card-border: rgba(255, 42, 109, 0.45);
+      --text-white: #ffffff;
+      --text-dim: #e2d7df;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    body, html {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #080509;
+      font-family: 'Nunito', sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* 16:9 Container */
+    .viewport-16-9 {
+      position: relative;
+      width: 100vw;
+      height: 56.25vw;
+      max-height: 100vh;
+      max-width: 177.78vh;
+      overflow: hidden;
+      background: #0f0a10;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 60px rgba(0, 0, 0, 0.95);
+    }
+
+    /* Video Background */
+    .bg-video {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      z-index: 1;
+    }
+
+    /* Fallback Animated Gradient if bg.mp4 is missing */
+    .bg-fallback {
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at center, #240f1a 0%, #120710 50%, #060207 100%);
+      z-index: 1;
+    }
+
+    /* Dim overlay */
+    .bg-dim-overlay {
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at center, rgba(13, 9, 13, 0.1) 0%, rgba(5, 3, 5, 0.5) 100%);
+      z-index: 2;
+      pointer-events: none;
+    }
+
+    /* Countdown Section (Bỏ khung nền hoàn toàn) */
+    .countdown-card {
+      position: relative;
+      z-index: 5;
+      width: 680px;
+      padding: 20px;
+      background: transparent;
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+      border: none;
+      border-radius: 0;
+      box-shadow: none;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+
+    .title-badge {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: var(--neon-red);
+      font-family: 'Montserrat', sans-serif;
+      font-size: 1.35rem;
+      font-weight: 900;
+      letter-spacing: 3px;
+      text-shadow: 0 0 18px var(--neon-red), 0 0 32px var(--neon-glow), 0 2px 10px rgba(0, 0, 0, 0.9);
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+
+    .title-badge .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--neon-red);
+      box-shadow: 0 0 14px var(--neon-red);
+    }
+
+    .subtitle {
+      color: var(--text-white);
+      font-size: 0.98rem;
+      font-weight: 800;
+      letter-spacing: 0.8px;
+      margin-bottom: 30px;
+      text-shadow: 0 0 12px rgba(255, 42, 109, 0.5), 0 2px 8px rgba(0, 0, 0, 0.95);
+    }
+
+    /* Timer Dial Nổi Bật - Đã loại bỏ filter trên div để tránh vệt bóng vuông */
+    .timer-wrapper {
+      position: relative;
+      width: 340px;
+      height: 340px;
+      margin-bottom: 34px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: visible;
+    }
+
+    .progress-svg {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      transform: rotate(-90deg);
+      overflow: visible;
+    }
+
+    .circle-bg {
+      fill: none;
+      stroke: rgba(255, 42, 109, 0.2);
+      stroke-width: 16;
+    }
+
+    .circle-progress {
+      fill: none;
+      stroke: var(--neon-red);
+      stroke-width: 16;
+      stroke-linecap: round;
+      stroke-dasharray: 691;
+      stroke-dashoffset: 0;
+      filter: url(#neonGlowFilter);
+      transition: stroke-dashoffset 0.8s ease;
+    }
+
+    .timer-inner {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+    }
+
+    .timer-digits {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 4.1rem;
+      font-weight: 900;
+      font-variant-numeric: tabular-nums;
+      color: #ffffff;
+      letter-spacing: -0.5px;
+      text-shadow: 
+        0 0 14px #ffffff,
+        0 0 28px var(--neon-red),
+        0 0 50px var(--neon-red),
+        0 4px 14px rgba(0, 0, 0, 0.95);
+      line-height: 1;
+      text-align: center;
+    }
+
+    /* Bottom progress bar */
+    .progress-track {
+      width: 80%;
+      height: 9px;
+      background: rgba(255, 255, 255, 0.12);
+      border-radius: 99px;
+      overflow: hidden;
+      padding: 1px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
+    }
+
+    .progress-fill {
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, #ff2a6d, #ff629c);
+      border-radius: 99px;
+      box-shadow: 0 0 16px var(--neon-red), 0 0 28px var(--neon-glow);
+      transition: width 0.8s ease;
+    }
+
+    /* Mascot & Speech Bubble */
+    .mascot-container {
+      position: absolute;
+      z-index: 10;
+      width: 140px;
+      cursor: grab;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      touch-action: none;
+    }
+
+    .mascot-container:active {
+      cursor: grabbing;
+    }
+
+    .speech-bubble {
+      position: relative;
+      background: rgba(22, 14, 20, 0.85);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: 1.5px solid var(--neon-red);
+      color: #fff;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 0.82rem;
+      font-weight: 800;
+      white-space: nowrap;
+      margin-bottom: 8px;
+      box-shadow: 0 0 14px rgba(255, 42, 109, 0.45);
+      animation: floatBubble 2.2s ease-in-out infinite alternate;
+      pointer-events: none;
+    }
+
+    .speech-bubble::after {
+      content: '';
+      position: absolute;
+      bottom: -7px;
+      left: 50%;
+      transform: translateX(-50%);
+      border-width: 7px 6px 0;
+      border-style: solid;
+      border-color: var(--neon-red) transparent transparent transparent;
+    }
+
+    @keyframes floatBubble {
+      0% { transform: translateY(0px); }
+      100% { transform: translateY(-5px); }
+    }
+
+    .mascot-body {
+      width: 90px;
+      height: 90px;
+      filter: drop-shadow(0 0 14px rgba(255, 42, 109, 0.7));
+      pointer-events: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.2s ease;
+    }
+
+    .mascot-body img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    /* Floating hearts when mascot is clicked */
+    @keyframes heartFloatUp {
+      0% { opacity: 1; transform: translate(0, 0) scale(0.6) rotate(0deg); }
+      100% { opacity: 0; transform: translate(var(--tx), -75px) scale(1.4) rotate(var(--rot)); }
+    }
+    .floating-heart {
+      position: absolute;
+      pointer-events: none;
+      animation: heartFloatUp 1.1s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+      z-index: 70;
+    }
+
+    /* Control HUD */
+    .control-hud {
+      position: absolute;
+      bottom: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 30;
+      display: flex;
+      gap: 10px;
+      background: rgba(15, 10, 15, 0.82);
+      backdrop-filter: blur(14px);
+      padding: 8px 18px;
+      border-radius: 99px;
+      border: 1px solid rgba(255, 42, 109, 0.35);
+      transition: all 0.3s ease;
+    }
+
+    .hud-btn {
+      background: transparent;
+      border: 1px solid rgba(255, 42, 109, 0.4);
+      color: #fff;
+      padding: 5px 14px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+
+    .hud-btn:hover {
+      background: var(--neon-red);
+      box-shadow: 0 0 10px var(--neon-red);
+    }
+
+    .hud-btn.primary {
+      background: rgba(255, 42, 109, 0.35);
+      border-color: #ff2a6d;
+      color: #fff;
+    }
+    .hud-btn.primary:hover {
+      background: #ff2a6d;
+    }
+
+    .hud-btn.recording {
+      background: #ff2a6d;
+      border-color: #ffffff;
+      animation: pulseRec 1.2s infinite;
+    }
+
+    /* Modal Tiến trình xuất video siêu tốc */
+    .export-progress-modal {
+      position: absolute;
+      inset: 0;
+      z-index: 250;
+      background: rgba(0, 0, 0, 0.88);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+    }
+
+    .export-progress-modal.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .export-box {
+      width: 90%;
+      max-width: 480px;
+      background: rgba(22, 14, 20, 0.96);
+      border: 1.5px solid var(--neon-red);
+      border-radius: 20px;
+      padding: 26px;
+      text-align: center;
+      box-shadow: 0 0 35px rgba(255, 42, 109, 0.4);
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .export-box h3 {
+      font-family: 'Montserrat', sans-serif;
+      color: var(--neon-red);
+      font-size: 1.2rem;
+      letter-spacing: 1px;
+    }
+
+    .export-bar-bg {
+      width: 100%;
+      height: 12px;
+      background: rgba(255, 255, 255, 0.12);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+
+    .export-bar-inner {
+      width: 0%;
+      height: 100%;
+      background: linear-gradient(90deg, #ff2a6d, #ff629c);
+      box-shadow: 0 0 12px #ff2a6d;
+      border-radius: 99px;
+      transition: width 0.15s ease;
+    }
+
+    .export-status {
+      font-size: 0.9rem;
+      color: var(--text-dim);
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Modal Hướng dẫn Link TikStudio */
+    .modal-overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 200;
+      background: rgba(0, 0, 0, 0.78);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+    }
+
+    .modal-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-card {
+      width: 90%;
+      max-width: 520px;
+      background: rgba(22, 14, 20, 0.95);
+      border: 1.5px solid var(--neon-red);
+      border-radius: 20px;
+      padding: 24px;
+      box-shadow: 0 0 35px rgba(255, 42, 109, 0.4);
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      text-align: left;
+    }
+
+    .modal-card h3 {
+      font-family: 'Montserrat', sans-serif;
+      color: var(--neon-red);
+      font-size: 1.15rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .modal-card p {
+      font-size: 0.88rem;
+      color: var(--text-dim);
+      line-height: 1.5;
+    }
+
+    .url-box {
+      display: flex;
+      gap: 8px;
+      background: rgba(10, 5, 8, 0.85);
+      border: 1px solid rgba(255, 42, 109, 0.4);
+      border-radius: 10px;
+      padding: 8px 12px;
+      align-items: center;
+    }
+
+    .url-box input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: #fff;
+      font-family: monospace;
+      font-size: 0.82rem;
+      outline: none;
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 6px;
+    }
+
+    @keyframes pulseRec {
+      0%, 100% { box-shadow: 0 0 8px #ff2a6d; transform: scale(1); }
+      50% { box-shadow: 0 0 22px #ff2a6d; transform: scale(1.05); }
+    }
+
+    /* Toast thông báo tải video */
+    .toast-notice {
+      position: absolute;
+      top: 24px;
+      right: 24px;
+      z-index: 100;
+      background: rgba(18, 12, 16, 0.92);
+      border: 1.5px solid var(--neon-red);
+      color: #fff;
+      padding: 10px 18px;
+      border-radius: 12px;
+      font-size: 0.85rem;
+      font-weight: 800;
+      box-shadow: 0 0 16px rgba(255, 42, 109, 0.45);
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(-10px);
+      transition: all 0.3s ease;
+    }
+
+    .toast-notice.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    input[type="file"] {
+      display: none;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+  </style>
+  <script>
+    function fallbackSVG(img) {
+      img.onerror = null;
+      img.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><ellipse cx="50" cy="50" rx="38" ry="36" fill="%231a0e16" stroke="%23ff2a6d" stroke-width="3"/><circle cx="34" cy="48" r="8" fill="%23ff2a6d"/><circle cx="66" cy="48" r="8" fill="%23ff2a6d"/><circle cx="36" cy="46" r="2.5" fill="%23ffffff"/><circle cx="68" cy="46" r="2.5" fill="%23ffffff"/><path d="M44 62 Q50 68 56 62" stroke="%23ff2a6d" stroke-width="3" fill="none" stroke-linecap="round"/><ellipse cx="26" cy="56" rx="5" ry="3" fill="%23ff2a6d" opacity="0.6"/><ellipse cx="74" cy="56" rx="5" ry="3" fill="%23ff2a6d" opacity="0.6"/></svg>';
+    }
+  </script>
+  <!-- Nạp thư viện MP4 Muxer hỗ trợ xuất file MP4 tốc độ cao từ WebCodecs -->
+  <script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.2.2/build/mp4-muxer.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/webm-muxer@5.0.2/build/webm-muxer.min.js"></script>
+</head>
+<body>
+
+  <div class="viewport-16-9" id="viewport">
+    <!-- Fallback Gradient if bg.mp4 doesn't exist -->
+    <div class="bg-fallback"></div>
+
+    <!-- Video Nền (bg.mp4) -->
+    <video class="bg-video" id="bgVideo" src="bg.mp4" autoplay loop muted playsinline onerror="this.style.display='none'"></video>
+    <div class="bg-dim-overlay"></div>
+
+    <!-- Khung Card Đếm Ngược -->
+    <div class="countdown-card">
+      <div class="title-badge">
+        <span class="dot"></span>
+        BUỔI LIVE SẮP BẮT ĐẦU
+        <span class="dot"></span>
+      </div>
+      <div class="subtitle">HÃY CHUẨN BỊ SẴN SÀNG • GIAO LƯU CÙNG NHAU NHÉ 💖</div>
+
+      <div class="timer-wrapper">
+        <svg class="progress-svg" viewBox="0 0 250 250">
+          <defs>
+            <!-- Native SVG Filter với vùng phủ rộng 200% để triệt tiêu hoàn toàn viền vuông clip-box -->
+            <filter id="neonGlowFilter" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="blur1" />
+              <feGaussianBlur in="SourceGraphic" stdDeviation="11" result="blur2" />
+              <feMerge>
+                <feMergeNode in="blur2" />
+                <feMergeNode in="blur1" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+          </defs>
+          <circle class="circle-bg" cx="125" cy="125" r="110"></circle>
+          <circle class="circle-progress" id="circleProgress" cx="125" cy="125" r="110"></circle>
+        </svg>
+        <div class="timer-inner">
+          <div class="timer-digits" id="timerDigits">10:00</div>
+        </div>
+      </div>
+
+      <div class="progress-track">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
+    </div>
+
+    <!-- Mascot & Bong Bóng Thoại -->
+    <div class="mascot-container" id="mascot" style="left: 120px; top: 180px;">
+      <div class="speech-bubble">Mọi người chờ xíu nha~ 💖</div>
+      <div class="mascot-body" id="mascotBody">
+        <img id="mascotImg" src="mascot.png" alt="Mascot" onerror="fallbackSVG(this)">
+      </div>
+    </div>
+
+    <!-- Thanh HUD điều khiển -->
+    <div class="control-hud" id="hud">
+      <button class="hud-btn" onclick="toggleTimer()" id="playBtn">⏸ Tạm dừng</button>
+      <button class="hud-btn" onclick="resetTimer()">↺ Đặt lại (10p)</button>
+      <button class="hud-btn" onclick="toggleRoam()" id="roamBtn">✈ Mascot: Bay</button>
+      <button class="hud-btn primary" onclick="exportFull10MinVideo()" id="fastExportBtn">⚡ Xuất Full 10p (1 Click)</button>
+      <button class="hud-btn" onclick="handleRecordVideo()" id="recordBtn">🎥 Quay tự do</button>
+      <button class="hud-btn" onclick="openTikStudioModal()">🔗 Link TikStudio</button>
+      <label class="hud-btn">
+        🎬 Đổi Video
+        <input type="file" accept="video/*" onchange="changeVideo(event)">
+      </label>
+      <label class="hud-btn">
+        📁 Đổi Mascot
+        <input type="file" accept="image/*" onchange="changeMascot(event)">
+      </label>
+    </div>
+
+    <!-- Modal Tiến trình xuất video siêu tốc 10 phút -->
+    <div class="export-progress-modal" id="exportModal">
+      <div class="export-box">
+        <h3>⚡ ĐANG XUẤT FULL VIDEO 10 PHÚT</h3>
+        <p style="font-size:0.85rem; color:#f3dbe8;">Hệ thống đang render siêu tốc từng giây từ 10:00 về 00:00. Bạn không cần phải chờ 10 phút!</p>
+        <div class="export-bar-bg">
+          <div class="export-bar-inner" id="exportBar"></div>
+        </div>
+        <div class="export-status" id="exportStatusText">Chuẩn bị dựng khung hình... (0%)</div>
+        <button class="hud-btn" style="align-self:center; margin-top:8px;" onclick="cancelFastExport()">✕ Hủy bỏ</button>
+      </div>
+    </div>
+
+    <!-- Modal Hướng dẫn dán TikStudio -->
+    <div class="modal-overlay" id="linkModal" onclick="closeTikStudioModal(event)">
+      <div class="modal-card" onclick="event.stopPropagation()">
+        <h3>🔗 Dán vào TikTok LIVE Studio / OBS</h3>
+        <p>Sao chép URL bên dưới rồi mở <strong>TikTok LIVE Studio</strong> &rarr; Chọn <strong>Thêm nguồn (Add Source)</strong> &rarr; chọn <strong>Trình duyệt (Browser / Trang web)</strong> và dán vào với kích thước <strong>1920 x 1080</strong>:</p>
+        
+        <div class="url-box">
+          <input type="text" id="streamUrlInput" readonly>
+          <button class="hud-btn" onclick="copyStreamUrl()">📋 Copy</button>
+        </div>
+
+        <p style="font-size: 0.8rem; color: #ff9bbb;">
+          💡 <em>Mẹo:</em> Nếu chạy file trực tiếp từ máy tính, bạn chỉ cần bấm nút <strong>Tải file HTML</strong> dưới đây và kéo file vào trình duyệt hoặc dùng đường dẫn local file.
+        </p>
+
+        <div class="modal-actions">
+          <button class="hud-btn" onclick="downloadHtmlFile()">📥 Tải file HTML</button>
+          <button class="hud-btn" onclick="closeTikStudioModal()">Đóng</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Thông báo trạng thái quay / xuất file -->
+    <div class="toast-notice" id="toastNotice">Đang chuẩn bị...</div>
+    <!-- Offscreen Canvas ghi hình Full HD 1080p chuẩn 16:9 không cần cấp quyền -->
+    <canvas id="recordCanvas" width="1920" height="1080" style="display:none;"></canvas>
+  </div>
+
+  <script>
+    const TOTAL_SECONDS = 10 * 60; // 10 phút = 600s
+    let remainingSeconds = TOTAL_SECONDS;
+    let isRunning = true;
+    let timerInterval = null;
+
+    const timerDigits = document.getElementById('timerDigits');
+    const circleProgress = document.getElementById('circleProgress');
+    const progressFill = document.getElementById('progressFill');
+    const playBtn = document.getElementById('playBtn');
+    const bgVideo = document.getElementById('bgVideo');
+    const viewport = document.getElementById('viewport');
+    const recordBtn = document.getElementById('recordBtn');
+    const toastNotice = document.getElementById('toastNotice');
+
+    const CIRCUMFERENCE = 2 * Math.PI * 110; // ~691.15
+    circleProgress.style.strokeDasharray = CIRCUMFERENCE;
+
+    function updateDisplay() {
+      const minutes = Math.floor(remainingSeconds / 60);
+      const seconds = remainingSeconds % 60;
+      timerDigits.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+
+      const progressRatio = remainingSeconds / TOTAL_SECONDS;
+      const offset = CIRCUMFERENCE * (1 - progressRatio);
+      circleProgress.style.strokeDashoffset = offset;
+      progressFill.style.width = `${progressRatio * 100}%`;
+    }
+
+    function startTimer() {
+      if (timerInterval) clearInterval(timerInterval);
+      timerInterval = setInterval(() => {
+        if (remainingSeconds > 0) {
+          remainingSeconds--;
+          updateDisplay();
+        } else {
+          clearInterval(timerInterval);
+          isRunning = false;
+          playBtn.textContent = '▶ Bắt đầu';
+        }
+      }, 1000);
+    }
+
+    function toggleTimer() {
+      if (isRunning) {
+        clearInterval(timerInterval);
+        playBtn.textContent = '▶ Tiếp tục';
+      } else {
+        if (remainingSeconds <= 0) remainingSeconds = TOTAL_SECONDS;
+        startTimer();
+        playBtn.textContent = '⏸ Tạm dừng';
+      }
+      isRunning = !isRunning;
+    }
+
+    function resetTimer() {
+      clearInterval(timerInterval);
+      remainingSeconds = TOTAL_SECONDS;
+      isRunning = true;
+      playBtn.textContent = '⏸ Tạm dừng';
+      updateDisplay();
+      startTimer();
+    }
+
+    // Chọn video nền hoặc mascot từ máy tính
+    function changeVideo(e) {
+      const file = e.target.files[0];
+      if (file) {
+        bgVideo.style.display = 'block';
+        bgVideo.src = URL.createObjectURL(file);
+        bgVideo.play();
+      }
+    }
+
+    function changeMascot(e) {
+      const file = e.target.files[0];
+      if (file) {
+        document.getElementById('mascotImg').src = URL.createObjectURL(file);
+      }
+    }
+
+    // Hiệu ứng bắn tim khi bấm vào mascot
+    function spawnHearts(x, y) {
+      for (let i = 0; i < 3; i++) {
+        const heart = document.createElement('div');
+        heart.className = 'floating-heart';
+        heart.textContent = '💖';
+        heart.style.left = `${x + (Math.random() * 30 - 15)}px`;
+        heart.style.top = `${y - 10}px`;
+        heart.style.setProperty('--tx', `${(Math.random() - 0.5) * 50}px`);
+        heart.style.setProperty('--rot', `${(Math.random() - 0.5) * 40}deg`);
+        viewport.appendChild(heart);
+        setTimeout(() => heart.remove(), 1100);
+      }
+    }
+
+    // Chuyển động Mascot: Kéo thả & Tự bay lượn
+    const mascot = document.getElementById('mascot');
+    const mascotBody = document.getElementById('mascotBody');
+    let isDragging = false;
+    let autoRoam = true;
+    let posX = 120, posY = 180;
+    let velX = 1.6, velY = 1.2;
+    let dragStartX = 0, dragStartY = 0;
+
+    function roam() {
+      if (autoRoam && !isDragging) {
+        const vRect = viewport.getBoundingClientRect();
+        const mWidth = mascot.offsetWidth;
+        const mHeight = mascot.offsetHeight;
+
+        posX += velX;
+        posY += velY;
+
+        if (posX <= 10 || posX + mWidth >= vRect.width - 10) {
+          velX *= -1;
+          // Chỉ lật thân mascot (mascot-body), giữ nguyên bong bóng thoại không bị lật ngược chữ
+          mascotBody.style.transform = velX < 0 ? 'scaleX(-1)' : 'scaleX(1)';
+        }
+        if (posY <= 10 || posY + mHeight >= vRect.height - 20) {
+          velY *= -1;
+        }
+
+        mascot.style.left = `${posX}px`;
+        mascot.style.top = `${posY}px`;
+      }
+      requestAnimationFrame(roam);
+    }
+
+    // Drag handlers hỗ trợ chuột và cảm ứng
+    function onPointerDown(e) {
+      isDragging = true;
+      const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+      const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+      dragStartX = clientX - mascot.offsetLeft;
+      dragStartY = clientY - mascot.offsetTop;
+      
+      const vRect = viewport.getBoundingClientRect();
+      spawnHearts(clientX - vRect.left, clientY - vRect.top);
+    }
+
+    function onPointerMove(e) {
+      if (!isDragging) return;
+      const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+      const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+      const vRect = viewport.getBoundingClientRect();
+
+      posX = Math.max(0, Math.min(clientX - vRect.left - (dragStartX - mascot.offsetLeft), vRect.width - mascot.offsetWidth));
+      posY = Math.max(0, Math.min(clientY - vRect.top - (dragStartY - mascot.offsetTop), vRect.height - mascot.offsetHeight));
+
+      mascot.style.left = `${posX}px`;
+      mascot.style.top = `${posY}px`;
+    }
+
+    function onPointerUp() {
+      isDragging = false;
+    }
+
+    mascot.addEventListener('mousedown', onPointerDown);
+    window.addEventListener('mousemove', onPointerMove);
+    window.addEventListener('mouseup', onPointerUp);
+
+    mascot.addEventListener('touchstart', onPointerDown, { passive: true });
+    window.addEventListener('touchmove', onPointerMove, { passive: true });
+    window.addEventListener('touchend', onPointerUp);
+
+    function toggleRoam() {
+      autoRoam = !autoRoam;
+      document.getElementById('roamBtn').textContent = autoRoam ? '✈ Mascot: Bay' : '🛑 Mascot: Đứng yên';
+    }
+
+    // Modal tạo và sao chép link dán vào TikStudio
+    const linkModal = document.getElementById('linkModal');
+    const streamUrlInput = document.getElementById('streamUrlInput');
+
+    function openTikStudioModal() {
+      const currentUrl = window.location.href;
+      streamUrlInput.value = currentUrl;
+      linkModal.classList.add('active');
+    }
+
+    function closeTikStudioModal(e) {
+      if (!e || e.target === linkModal || e.type === 'click') {
+        linkModal.classList.remove('active');
+      }
+    }
+
+    function copyStreamUrl() {
+      const url = streamUrlInput.value;
+      if (!url) return;
+      
+      // Dùng fallback tương thích tốt bên trong iframe
+      try {
+        streamUrlInput.select();
+        streamUrlInput.setSelectionRange(0, 99999);
+        const successful = document.execCommand('copy');
+        if (successful) {
+          showToast('✅ Đã sao chép link! Dán vào nguồn Browser của TikStudio (1920x1080).');
+          closeTikStudioModal();
+          return;
+        }
+      } catch (err) {}
+
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).then(() => {
+          showToast('✅ Đã sao chép link vào clipboard!');
+          closeTikStudioModal();
+        }).catch(() => {
+          showToast('📋 Hãy bôi đen link và nhấn Ctrl+C để sao chép.');
+        });
+      } else {
+        showToast('📋 Hãy bôi đen link và nhấn Ctrl+C để sao chép.');
+      }
+    }
+
+    // Cho phép tải trực tiếp toàn bộ source code HTML về máy chỉ với 1 click
+    function downloadHtmlFile() {
+      const htmlContent = "<!DOCTYPE html>\n" + document.documentElement.outerHTML;
+      const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'countdown.html';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast('✅ Đã tải file countdown.html về máy!');
+    }
+
+    // Hiển thị thông báo Toast
+    function showToast(msg, duration = 3000) {
+      toastNotice.textContent = msg;
+      toastNotice.classList.add('show');
+      setTimeout(() => {
+        toastNotice.classList.remove('show');
+      }, duration);
+    }
+
+    /* ==========================================================================
+       XUẤT FULL VIDEO 10 PHÚT SIÊU TỐC TRONG 1 NÚT BẤM (OFFLINE RENDERING)
+       Render toàn bộ 600 giây (từ 10:00 -> 00:00) chạy ở tốc độ máy tính (vài giây)
+       ========================================================================== */
+    const exportModal = document.getElementById('exportModal');
+    const exportBar = document.getElementById('exportBar');
+    const exportStatusText = document.getElementById('exportStatusText');
+    let isFastExporting = false;
+    let cancelExportRequested = false;
+
+    // Kiểm tra an toàn xem Video hoặc Ảnh có gây "Tainted Canvas" (SecurityError) không
+    function isElementCanvasClean(element) {
+      try {
+        const testCanvas = document.createElement('canvas');
+        testCanvas.width = 8;
+        testCanvas.height = 8;
+        const tCtx = testCanvas.getContext('2d');
+        tCtx.drawImage(element, 0, 0, 8, 8);
+        tCtx.getImageData(0, 0, 1, 1);
+        return true;
+      } catch (err) {
+        return false;
+      }
+    }
+
+    // Vẽ Mascot vector dự phòng nếu ảnh bị chặn CORS/file-origin
+    function drawVectorMascot(ctx, x, y, facingLeft) {
+      ctx.save();
+      ctx.translate(x + 50, y + 50);
+      if (facingLeft) ctx.scale(-1, 1);
+      ctx.shadowColor = 'rgba(255, 42, 109, 0.7)';
+      ctx.shadowBlur = 18;
+
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 38, 36, 0, 0, Math.PI * 2);
+      ctx.fillStyle = '#180e16';
+      ctx.strokeStyle = '#ff2a6d';
+      ctx.lineWidth = 3;
+      ctx.fill();
+      ctx.stroke();
+
+      // Mắt anime đỏ rực
+      ctx.fillStyle = '#ff2a6d';
+      ctx.beginPath();
+      ctx.arc(-16, -2, 8, 0, Math.PI * 2);
+      ctx.arc(16, -2, 8, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Đốm sáng mắt
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(-14, -4, 2.5, 0, Math.PI * 2);
+      ctx.arc(18, -4, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Nụ cười
+      ctx.beginPath();
+      ctx.arc(0, 10, 6, 0.1 * Math.PI, 0.9 * Math.PI);
+      ctx.strokeStyle = '#ff2a6d';
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+
+      ctx.restore();
+    }
+
+    // Vẽ 1 khung hình độc lập tại giây bất kỳ (secRemaining: 600 -> 0)
+    function drawExactFrame(ctx, secRemaining, elapsedSec, canDrawVideo, canDrawMascot) {
+      // 1. Nền video (nếu an toàn không bị chặn CORS) hoặc Radial Gradient
+      let drewVideo = false;
+      if (canDrawVideo && bgVideo && bgVideo.readyState >= 2) {
+        try {
+          ctx.drawImage(bgVideo, 0, 0, 1920, 1080);
+          drewVideo = true;
+        } catch (e) {}
+      }
+      if (!drewVideo) {
+        drawFallbackBackground(ctx);
+      }
+
+      // 2. Lớp phủ mờ
+      const dimGrad = ctx.createRadialGradient(960, 540, 100, 960, 540, 1050);
+      dimGrad.addColorStop(0, 'rgba(13, 9, 13, 0.15)');
+      dimGrad.addColorStop(1, 'rgba(5, 3, 5, 0.65)');
+      ctx.fillStyle = dimGrad;
+      ctx.fillRect(0, 0, 1920, 1080);
+
+      // 3. Tiêu đề
+      ctx.save();
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.font = '900 38px Montserrat, sans-serif';
+      ctx.fillStyle = '#ff2a6d';
+      ctx.shadowColor = '#ff2a6d';
+      ctx.shadowBlur = 28;
+      ctx.fillText('●   BUỔI LIVE SẮP BẮT ĐẦU   ●', 960, 245);
+
+      ctx.font = '800 24px Nunito, sans-serif';
+      ctx.fillStyle = '#ffffff';
+      ctx.shadowColor = 'rgba(255, 42, 109, 0.65)';
+      ctx.shadowBlur = 14;
+      ctx.fillText('HÃY CHUẨN BỊ SẴN SÀNG • GIAO LƯU CÙNG NHAU NHÉ 💖', 960, 305);
+      ctx.restore();
+
+      // 4. Vòng tròn đếm ngược
+      const cX = 960, cY = 530, radius = 170;
+      ctx.save();
+      ctx.lineWidth = 18;
+      ctx.strokeStyle = 'rgba(255, 42, 109, 0.2)';
+      ctx.beginPath();
+      ctx.arc(cX, cY, radius, 0, Math.PI * 2);
+      ctx.stroke();
+
+      const progressRatio = secRemaining / TOTAL_SECONDS;
+      const startAngle = -Math.PI / 2;
+      const endAngle = startAngle + (Math.PI * 2 * progressRatio);
+
+      ctx.lineWidth = 18;
+      ctx.strokeStyle = '#ff2a6d';
+      ctx.shadowColor = '#ff2a6d';
+      ctx.shadowBlur = 35;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.arc(cX, cY, radius, startAngle, endAngle, false);
+      ctx.stroke();
+      ctx.restore();
+
+      // 5. Chữ số đếm ngược
+      ctx.save();
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.font = '900 102px Montserrat, sans-serif';
+      ctx.fillStyle = '#ffffff';
+      ctx.shadowColor = '#ff2a6d';
+      ctx.shadowBlur = 32;
+
+      const mins = Math.floor(secRemaining / 60);
+      const secs = secRemaining % 60;
+      const timeStr = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+      ctx.fillText(timeStr, cX, cY);
+      ctx.restore();
+
+      // 6. Thanh tiến trình dưới
+      ctx.save();
+      const barW = 620, barH = 12, barX = 960 - barW / 2, barY = 770;
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.12)';
+      drawPill(ctx, barX, barY, barW, barH, 6);
+      ctx.fill();
+
+      ctx.fillStyle = '#ff2a6d';
+      ctx.shadowColor = '#ff2a6d';
+      ctx.shadowBlur = 20;
+      const fillW = Math.max(12, barW * progressRatio);
+      drawPill(ctx, barX, barY, fillW, barH, 6);
+      ctx.fill();
+      ctx.restore();
+
+      // 7. Mascot tính toán theo quỹ đạo thời gian đã trôi qua
+      const mX = 220 + Math.sin(elapsedSec * 0.4) * 160;
+      const mY = 320 + Math.cos(elapsedSec * 0.3) * 110;
+      const facingLeft = Math.cos(elapsedSec * 0.4) < 0;
+
+      // Bong bóng thoại
+      ctx.save();
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      const bubbleW = 260, bubbleH = 42;
+      const bubbleX = mX + 50 - bubbleW / 2;
+      const bubbleY = mY - 48;
+
+      ctx.fillStyle = 'rgba(22, 14, 20, 0.88)';
+      ctx.strokeStyle = '#ff2a6d';
+      ctx.lineWidth = 2.5;
+      ctx.shadowColor = 'rgba(255, 42, 109, 0.55)';
+      ctx.shadowBlur = 16;
+      drawPill(ctx, bubbleX, bubbleY, bubbleW, bubbleH, 20);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(mX + 50 - 6, bubbleY + bubbleH);
+      ctx.lineTo(mX + 50 + 6, bubbleY + bubbleH);
+      ctx.lineTo(mX + 50, bubbleY + bubbleH + 7);
+      ctx.fillStyle = '#ff2a6d';
+      ctx.fill();
+
+      ctx.font = '800 18px Nunito, sans-serif';
+      ctx.fillStyle = '#ffffff';
+      ctx.shadowColor = '#ff2a6d';
+      ctx.shadowBlur = 8;
+      ctx.fillText('Mọi người chờ xíu nha~ 💖', mX + 50, bubbleY + bubbleH / 2);
+      ctx.restore();
+
+      // Vẽ hình mascot
+      const mascotImg = document.getElementById('mascotImg');
+      if (canDrawMascot && mascotImg && mascotImg.complete && mascotImg.naturalWidth > 0) {
+        try {
+          ctx.save();
+          const mW = 100, mH = 100;
+          ctx.translate(mX + mW / 2, mY + mH / 2);
+          if (facingLeft) ctx.scale(-1, 1);
+          ctx.shadowColor = 'rgba(255, 42, 109, 0.7)';
+          ctx.shadowBlur = 18;
+          ctx.drawImage(mascotImg, -mW / 2, -mH / 2, mW, mH);
+          ctx.restore();
+        } catch (e) {
+          drawVectorMascot(ctx, mX, mY, facingLeft);
+        }
+      } else {
+        drawVectorMascot(ctx, mX, mY, facingLeft);
+      }
+    }
+
+    function cancelFastExport() {
+      cancelExportRequested = true;
+      exportModal.classList.remove('active');
+      isFastExporting = false;
+      showToast('⚠️ Đã dừng xuất video.');
+    }
+
+    // Tự động tìm codec 1080p thích hợp nhất trên máy tính người dùng
+    async function resolveSupportedEncoderConfig(width, height, fps) {
+      if (typeof VideoEncoder === 'undefined') return null;
+
+      // Danh sách codec H.264 Level 4.0 trở lên (hỗ trợ 1080p)
+      const h264List = [
+        'avc1.420028', // Baseline Profile Level 4.0 (chuẩn 1080p 30fps)
+        'avc1.4d002a', // Main Profile Level 4.2
+        'avc1.640028', // High Profile Level 4.0
+        'avc1.420034', // Baseline Level 5.2
+        'avc1.42E028'
+      ];
+
+      for (const codec of h264List) {
+        try {
+          const cfg = { codec, width, height, bitrate: 4_500_000, framerate: fps };
+          const support = await VideoEncoder.isConfigSupported(cfg);
+          if (support && support.supported) {
+            return { format: 'mp4', codecType: 'avc', config: cfg };
+          }
+        } catch (e) {}
+      }
+
+      // Nếu không có phần cứng H.264, thử VP9 (tương thích MP4 hoặc WebM)
+      const vp9List = ['vp09.00.10.08', 'vp09.00.41.08'];
+      for (const codec of vp9List) {
+        try {
+          const cfg = { codec, width, height, bitrate: 4_000_000, framerate: fps };
+          const support = await VideoEncoder.isConfigSupported(cfg);
+          if (support && support.supported) {
+            return { format: 'mp4', codecType: 'vp9', config: cfg };
+          }
+        } catch (e) {}
+      }
+
+      // Thử codec VP8 WebM
+      try {
+        const cfg = { codec: 'vp8', width, height, bitrate: 4_000_000, framerate: fps };
+        const support = await VideoEncoder.isConfigSupported(cfg);
+        if (support && support.supported) {
+          return { format: 'webm', codecType: 'vp8', config: cfg };
+        }
+      } catch (e) {}
+
+      return null;
+    }
+
+    async function exportFull10MinVideo() {
+      if (isFastExporting) return;
+      isFastExporting = true;
+      cancelExportRequested = false;
+
+      exportModal.classList.add('active');
+      exportBar.style.width = '0%';
+      exportStatusText.textContent = 'Kiểm tra cấu hình Video 1080p...';
+
+      const width = 1920;
+      const height = 1080;
+      const fps = 2; // 2 FPS: 1200 khung hình cho trọn vẹn 600 giây (10 phút), render siêu tốc ~4 giây, file siêu nhẹ chuẩn nét
+      const totalSecondsToRender = 600; // Đầy đủ 600 giây = 10:00 -> 00:00
+      const totalFrames = totalSecondsToRender * fps;
+
+      const encoderSetting = await resolveSupportedEncoderConfig(width, height, fps);
+
+      if (!encoderSetting) {
+        exportModal.classList.remove('active');
+        isFastExporting = false;
+        showToast('⚠️ Trình duyệt chưa kích hoạt WebCodecs. Hãy dùng trình duyệt Chrome/Edge hoặc nút "Quay tự do".', 5000);
+        return;
+      }
+
+      try {
+        // Kiểm tra an toàn nguồn ảnh/video để không làm sập canvas
+        const canDrawVideo = isElementCanvasClean(bgVideo);
+        const mascotImg = document.getElementById('mascotImg');
+        const canDrawMascot = mascotImg ? isElementCanvasClean(mascotImg) : false;
+
+        let muxer = null;
+        if (encoderSetting.format === 'mp4' && typeof Mp4Muxer !== 'undefined') {
+          muxer = new Mp4Muxer.Muxer({
+            target: new Mp4Muxer.ArrayBufferTarget(),
+            video: {
+              codec: encoderSetting.codecType,
+              width: width,
+              height: height
+            },
+            fastStart: 'in-memory'
+          });
+        } else if (typeof WebMMuxer !== 'undefined') {
+          muxer = new WebMMuxer.Muxer({
+            target: new WebMMuxer.ArrayBufferTarget(),
+            video: {
+              codec: encoderSetting.codecType === 'vp8' ? 'V_VP8' : 'V_VP9',
+              width: width,
+              height: height
+            }
+          });
+        } else {
+          throw new Error('Chưa nạp được thư viện Muxer.');
+        }
+
+        let videoEncoder = new VideoEncoder({
+          output: (chunk, meta) => muxer.addVideoChunk(chunk, meta),
+          error: (e) => console.error('VideoEncoder error:', e)
+        });
+
+        videoEncoder.configure(encoderSetting.config);
+
+        const offCanvas = document.createElement('canvas');
+        offCanvas.width = width;
+        offCanvas.height = height;
+        const ctx = offCanvas.getContext('2d', { alpha: false });
+
+        for (let f = 0; f <= totalFrames; f++) {
+          if (cancelExportRequested) {
+            videoEncoder.close();
+            return;
+          }
+
+          const elapsedSec = f / fps;
+          const secRemaining = Math.max(0, TOTAL_SECONDS - Math.floor(elapsedSec));
+
+          drawExactFrame(ctx, secRemaining, elapsedSec, canDrawVideo, canDrawMascot);
+
+          // Timestamp tính chuẩn bằng micro-giây (1 giây = 1.000.000 micro-giây)
+          const timestampMicroseconds = Math.round((f / fps) * 1_000_000);
+          const durationMicroseconds = Math.round((1 / fps) * 1_000_000);
+
+          const frame = new VideoFrame(offCanvas, {
+            timestamp: timestampMicroseconds,
+            duration: durationMicroseconds
+          });
+
+          // Tạo Keyframe mỗi 5 giây để video tương thích hoàn hảo mọi phần mềm
+          const keyFrame = (f % (fps * 5) === 0);
+          videoEncoder.encode(frame, { keyFrame });
+          frame.close();
+
+          const pct = Math.floor((f / totalFrames) * 100);
+          const currentM = Math.floor(elapsedSec / 60);
+          const currentS = Math.floor(elapsedSec % 60);
+          exportBar.style.width = `${pct}%`;
+          exportStatusText.textContent = `Đang dựng: ${String(currentM).padStart(2,'0')}:${String(currentS).padStart(2,'0')} / 10:00 (${pct}%)`;
+
+          if (f % 20 === 0) {
+            await new Promise(r => setTimeout(r, 0));
+          }
+        }
+
+        exportStatusText.textContent = 'Đang đóng gói file video 10 phút (1080p)...';
+        await videoEncoder.flush();
+        videoEncoder.close();
+        muxer.finalize();
+
+        const buffer = muxer.target.buffer;
+        const mime = encoderSetting.format === 'mp4' ? 'video/mp4' : 'video/webm';
+        const ext = encoderSetting.format === 'mp4' ? 'mp4' : 'webm';
+        const blob = new Blob([buffer], { type: mime });
+
+        triggerVideoDownload(blob, `intro-countdown-10min-${Date.now()}.${ext}`);
+
+      } catch (err) {
+        console.error('Lỗi khi xuất video:', err);
+        exportModal.classList.remove('active');
+        isFastExporting = false;
+        showToast('⚠️ Quá trình xuất gặp sự cố: ' + err.message, 4000);
+      }
+    }
+
+    function triggerVideoDownload(blob, filename) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        exportModal.classList.remove('active');
+        isFastExporting = false;
+        showToast('✅ Đã xuất xong Full Video 10:00 (1080p)!');
+      }, 500);
+    }
+
+    // Cơ chế Ghi hình Canvas Full HD 1920x1080 tự do thời gian thực
+    const recordCanvas = document.getElementById('recordCanvas');
+    const rCtx = recordCanvas.getContext('2d');
+    let mediaRecorder = null;
+    let recordedChunks = [];
+    let isRecording = false;
+    let recordAnimId = null;
+    let recordSecondsCount = 0;
+    let recordTimerInterval = null;
+
+    // Hàm vẽ hình chữ nhật bo góc tương thích mọi trình duyệt
+    function drawPill(ctx, x, y, w, h, r) {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.lineTo(x + w - r, y);
+      ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+      ctx.lineTo(x + w, y + h - r);
+      ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+      ctx.lineTo(x + r, y + h);
+      ctx.quadraticCurveTo(x, y, x + h, y + h - r);
+      ctx.lineTo(x, y + r);
+      ctx.quadraticCurveTo(x, y, x + r, y);
+      ctx.closePath();
+    }
+
+    function drawFallbackBackground(ctx) {
+      const grad = ctx.createRadialGradient(960, 540, 50, 960, 540, 1100);
+      grad.addColorStop(0, '#240f1a');
+      grad.addColorStop(0.5, '#120710');
+      grad.addColorStop(1, '#060207');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, 1920, 1080);
+    }
+
+    // Render từng khung hình chuẩn 1920x1080 vào Canvas
+    function renderFrameToCanvas() {
+      if (!isRecording) return;
+
+      // 1. Vẽ nền video hoặc gradient dự phòng
+      let drewVideo = false;
+      if (bgVideo && !bgVideo.paused && bgVideo.readyState >= 2) {
+        try {
+          rCtx.drawImage(bgVideo, 0, 0, 1920, 1080);
+          drewVideo = true;
+        } catch (e) {
+          // Bỏ qua nếu có hạn chế CORS từ video ngoài
+        }
+      }
+      if (!drewVideo) {
+        drawFallbackBackground(rCtx);
+      }
+
+      // 2. Lớp phủ tối mờ tạo chiều sâu
+      const dimGrad = rCtx.createRadialGradient(960, 540, 100, 960, 540, 1050);
+      dimGrad.addColorStop(0, 'rgba(13, 9, 13, 0.15)');
+      dimGrad.addColorStop(1, 'rgba(5, 3, 5, 0.65)');
+      rCtx.fillStyle = dimGrad;
+      rCtx.fillRect(0, 0, 1920, 1080);
+
+      // 3. Tiêu đề chính & Tiêu đề phụ
+      rCtx.save();
+      rCtx.textAlign = 'center';
+      rCtx.textBaseline = 'middle';
+
+      rCtx.font = '900 38px Montserrat, sans-serif';
+      rCtx.fillStyle = '#ff2a6d';
+      rCtx.shadowColor = '#ff2a6d';
+      rCtx.shadowBlur = 28;
+      rCtx.fillText('●   BUỔI LIVE SẮP BẮT ĐẦU   ●', 960, 245);
+
+      rCtx.font = '800 24px Nunito, sans-serif';
+      rCtx.fillStyle = '#ffffff';
+      rCtx.shadowColor = 'rgba(255, 42, 109, 0.65)';
+      rCtx.shadowBlur = 14;
+      rCtx.fillText('HÃY CHUẨN BỊ SẴN SÀNG • GIAO LƯU CÙNG NHAU NHÉ 💖', 960, 305);
+      rCtx.restore();
+
+      // 4. Vòng tròn đếm ngược neon phát sáng
+      const cX = 960, cY = 530, radius = 170;
+      rCtx.save();
+      // Vòng tròn nền mờ
+      rCtx.lineWidth = 18;
+      rCtx.strokeStyle = 'rgba(255, 42, 109, 0.2)';
+      rCtx.beginPath();
+      rCtx.arc(cX, cY, radius, 0, Math.PI * 2);
+      rCtx.stroke();
+
+      // Vòng tròn tiến trình chạy ngược
+      const progressRatio = remainingSeconds / TOTAL_SECONDS;
+      const startAngle = -Math.PI / 2;
+      const endAngle = startAngle + (Math.PI * 2 * progressRatio);
+
+      rCtx.lineWidth = 18;
+      rCtx.strokeStyle = '#ff2a6d';
+      rCtx.shadowColor = '#ff2a6d';
+      rCtx.shadowBlur = 35;
+      rCtx.lineCap = 'round';
+      rCtx.beginPath();
+      rCtx.arc(cX, cY, radius, startAngle, endAngle, false);
+      rCtx.stroke();
+      rCtx.restore();
+
+      // 5. Chữ số đếm ngược
+      rCtx.save();
+      rCtx.textAlign = 'center';
+      rCtx.textBaseline = 'middle';
+      rCtx.font = '900 102px Montserrat, sans-serif';
+      rCtx.fillStyle = '#ffffff';
+      rCtx.shadowColor = '#ff2a6d';
+      rCtx.shadowBlur = 32;
+
+      const mins = Math.floor(remainingSeconds / 60);
+      const secs = remainingSeconds % 60;
+      const timeStr = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+      rCtx.fillText(timeStr, cX, cY);
+      rCtx.restore();
+
+      // 6. Thanh tiến trình phía dưới
+      rCtx.save();
+      const barW = 620, barH = 12, barX = 960 - barW / 2, barY = 770;
+      rCtx.fillStyle = 'rgba(255, 255, 255, 0.12)';
+      drawPill(rCtx, barX, barY, barW, barH, 6);
+      rCtx.fill();
+
+      rCtx.fillStyle = '#ff2a6d';
+      rCtx.shadowColor = '#ff2a6d';
+      rCtx.shadowBlur = 20;
+      const fillW = Math.max(12, barW * progressRatio);
+      drawPill(rCtx, barX, barY, fillW, barH, 6);
+      rCtx.fill();
+      rCtx.restore();
+
+      // 7. Mascot & Bong bóng thoại (đồng bộ tọa độ theo tỉ lệ 1920x1080)
+      const vRect = viewport.getBoundingClientRect();
+      const scaleX = 1920 / (vRect.width || 1920);
+      const scaleY = 1080 / (vRect.height || 1080);
+      const mX = posX * scaleX;
+      const mY = posY * scaleY;
+
+      // Bong bóng thoại
+      rCtx.save();
+      rCtx.textAlign = 'center';
+      rCtx.textBaseline = 'middle';
+      const bubbleW = 260, bubbleH = 42;
+      const bubbleX = mX + 50 - bubbleW / 2;
+      const bubbleY = mY - 48;
+
+      rCtx.fillStyle = 'rgba(22, 14, 20, 0.88)';
+      rCtx.strokeStyle = '#ff2a6d';
+      rCtx.lineWidth = 2.5;
+      rCtx.shadowColor = 'rgba(255, 42, 109, 0.55)';
+      rCtx.shadowBlur = 16;
+      drawPill(rCtx, bubbleX, bubbleY, bubbleW, bubbleH, 20);
+      rCtx.fill();
+      rCtx.stroke();
+
+      // Mũi nhọn bong bóng
+      rCtx.beginPath();
+      rCtx.moveTo(mX + 50 - 6, bubbleY + bubbleH);
+      rCtx.lineTo(mX + 50 + 6, bubbleY + bubbleH);
+      rCtx.lineTo(mX + 50, bubbleY + bubbleH + 7);
+      rCtx.fillStyle = '#ff2a6d';
+      rCtx.fill();
+
+      // Chữ trong bong bóng
+      rCtx.font = '800 18px Nunito, sans-serif';
+      rCtx.fillStyle = '#ffffff';
+      rCtx.shadowColor = '#ff2a6d';
+      rCtx.shadowBlur = 8;
+      rCtx.fillText('Mọi người chờ xíu nha~ 💖', mX + 50, bubbleY + bubbleH / 2);
+      rCtx.restore();
+
+      // Thân mascot
+      const mascotImg = document.getElementById('mascotImg');
+      if (mascotImg && mascotImg.complete && mascotImg.naturalWidth > 0) {
+        try {
+          rCtx.save();
+          const mW = 100, mH = 100;
+          rCtx.translate(mX + mW / 2, mY + mH / 2);
+          if (velX < 0) rCtx.scale(-1, 1);
+          rCtx.shadowColor = 'rgba(255, 42, 109, 0.7)';
+          rCtx.shadowBlur = 18;
+          rCtx.drawImage(mascotImg, -mW / 2, -mH / 2, mW, mH);
+          rCtx.restore();
+        } catch (e) {
+          // Bỏ qua nếu lỗi ảnh
+        }
+      }
+
+      recordAnimId = requestAnimationFrame(renderFrameToCanvas);
+    }
+
+    // Bắt đầu / Dừng ghi hình trực tiếp bằng Canvas
+    function handleRecordVideo() {
+      if (isRecording) {
+        stopRecordingVideo();
+        return;
+      }
+
+      try {
+        isRecording = true;
+        recordedChunks = [];
+        recordSecondsCount = 0;
+
+        // Bắt đầu render vòng lặp vào canvas
+        renderFrameToCanvas();
+
+        // Thu luồng video 30fps trực tiếp từ Canvas mà không cần cấp bất kỳ quyền nào
+        const canvasStream = recordCanvas.captureStream(30);
+
+        let mimeType = 'video/webm;codecs=vp9';
+        if (MediaRecorder.isTypeSupported('video/mp4;codecs=avc1.42E01E,mp4a.40.2')) {
+          mimeType = 'video/mp4;codecs=avc1.42E01E,mp4a.40.2';
+        } else if (MediaRecorder.isTypeSupported('video/mp4')) {
+          mimeType = 'video/mp4';
+        } else if (MediaRecorder.isTypeSupported('video/webm;codecs=vp8')) {
+          mimeType = 'video/webm;codecs=vp8';
+        } else if (MediaRecorder.isTypeSupported('video/webm')) {
+          mimeType = 'video/webm';
+        }
+
+        try {
+          mediaRecorder = new MediaRecorder(canvasStream, { mimeType, videoBitsPerSecond: 6000000 });
+        } catch (e) {
+          mediaRecorder = new MediaRecorder(canvasStream);
+        }
+
+        mediaRecorder.ondataavailable = (event) => {
+          if (event.data && event.data.size > 0) {
+            recordedChunks.push(event.data);
+          }
+        };
+
+        mediaRecorder.onstop = () => {
+          isRecording = false;
+          cancelAnimationFrame(recordAnimId);
+          clearInterval(recordTimerInterval);
+
+          recordBtn.classList.remove('recording');
+          recordBtn.textContent = '🎥 Tải Video';
+
+          if (recordedChunks.length > 0) {
+            showToast('⏳ Đang đóng gói video Full HD...');
+            const finalType = mediaRecorder.mimeType || 'video/webm';
+            const blob = new Blob(recordedChunks, { type: finalType });
+            const url = URL.createObjectURL(blob);
+            const ext = finalType.includes('mp4') ? 'mp4' : 'webm';
+
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            a.download = `live-intro-1080p-${Date.now()}.${ext}`;
+            document.body.appendChild(a);
+            a.click();
+
+            setTimeout(() => {
+              document.body.removeChild(a);
+              URL.revokeObjectURL(url);
+              showToast('✅ Đã tải video Full HD về máy thành công!');
+            }, 800);
+          }
+        };
+
+        mediaRecorder.start(1000);
+        recordBtn.classList.add('recording');
+        recordBtn.textContent = '⏹ Dừng & Lưu (00:00)';
+
+        recordTimerInterval = setInterval(() => {
+          recordSecondsCount++;
+          const m = Math.floor(recordSecondsCount / 60);
+          const s = recordSecondsCount % 60;
+          const timeLabel = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+          recordBtn.textContent = `⏹ Dừng & Lưu (${timeLabel})`;
+        }, 1000);
+
+        showToast('🔴 Đang ghi hình 1080p... Bấm lại nút này bất kỳ lúc nào để tải video về.');
+      } catch (err) {
+        isRecording = false;
+        console.error('Lỗi khi ghi hình canvas:', err);
+        showToast('⚠️ Trình duyệt chưa hỗ trợ xuất video trực tiếp.');
+      }
+    }
+
+    function stopRecordingVideo() {
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        mediaRecorder.stop();
+      }
+    }
+
+    // Phím tắt bàn phím
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'Space') { e.preventDefault(); toggleTimer(); }
+      if (e.code === 'KeyR') resetTimer();
+      if (e.code === 'KeyM') toggleRoam();
+      if (e.code === 'KeyH') {
+        const hud = document.getElementById('hud');
+        hud.classList.toggle('hidden');
+      }
+    });
+
+    // Khởi chạy khi tải trang
+    updateDisplay();
+    startTimer();
+    roam();
+  </script>
+</body>
+</html>
+```
